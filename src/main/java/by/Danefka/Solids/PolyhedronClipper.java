@@ -118,7 +118,7 @@ public class PolyhedronClipper {
         }
 
         // Добавляем новую грань на плоскости z=0
-        if (!verticesAtZero.isEmpty()) {
+        if (verticesAtZero.size() > 2 && newVertices.size() > 1) {
             List<Integer> convexHull = convexHull(newVertices, verticesAtZero);
             if (convexHull.size() >= 3) {
                 int[] hullVerts = convexHull.stream()

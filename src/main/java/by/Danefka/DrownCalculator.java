@@ -1,13 +1,10 @@
 package by.Danefka;
 
-import by.Danefka.Solids.Face;
 import by.Danefka.Solids.Polyhedron;
 import by.Danefka.Solids.PolyhedronClipper;
 import by.Danefka.methods.ICalculate;
 
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
 
 public class DrownCalculator {
     private double h;
