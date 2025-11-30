@@ -1,142 +1,160 @@
-//package by.Danefka;
-//
-//import org.lwjgl.opengl.GL;
-//
-//import static org.lwjgl.glfw.Callbacks.glfwFreeCallbacks;
-//import static org.lwjgl.glfw.GLFW.*;
-//import static org.lwjgl.opengl.GL11.*;
-//import static org.lwjgl.opengl.GL11.glEnd;
-//import static org.lwjgl.system.MemoryUtil.NULL;
-//
-//import static org.lwjgl.opengl.GL11.*;
-//import static org.lwjgl.opengl.GL20.*;
-//import static org.lwjgl.opengl.GL30.*;
-//import org.lwjgl.glfw.GLFW;
-//import org.lwjgl.system.MemoryStack;
-//
-//public class OpenGLIceberg {
-//    private long window;
-//
-//    public void run() {
-//        init();
-//        loop();
-//
-//        // Освобождаем ресурсы
-//        glfwFreeCallbacks(window);
-//        glfwDestroyWindow(window);
-//        glfwTerminate();
-//    }
-//
-//    private void init() {
-//        // Инициализация GLFW
-//        if (!glfwInit()) throw new IllegalStateException("Не удалось инициализировать GLFW");
-//
-//        // Создание окна
-//        window = glfwCreateWindow(800, 600, "OpenGL в Java", NULL, NULL);
-//        if (window == NULL) throw new RuntimeException("Ошибка создания окна");
-//
-//        glfwMakeContextCurrent(window);
-//        glfwShowWindow(window);
-//    }
-//
-//    private void loop() {
-//        // Создаём OpenGL-контекст
-//        GL.createCapabilities();
-//
-//        // Устанавливаем область вывода
-//        glViewport(0, 0, 800, 600);
-//
-//        // Настройка фона
-//        glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
-//
-//        while (!glfwWindowShouldClose(window)) {
-//
-//
-//            // Очищаем экран
-//            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-//
-//            // Рисуем треугольник
-//            glBegin(GL_TRIANGLES);
-//            glColor3f(1.0f, 0.0f, 0.0f); glVertex2f(-0.5f, -0.5f);
-//            glColor3f(0.0f, 1.0f, 0.0f); glVertex2f( 0.5f, -0.5f);
-//            glColor3f(0.0f, 0.0f, 1.0f); glVertex2f( 0.0f,  0.5f);
-//            glEnd();
-//
-//            // Обновляем окно
+package by.Danefka;
+
+import by.Danefka.Solids.Tetrahedron;
+import by.Danefka.methods.RungeKuttaFourMethod;
+import org.joml.Matrix4f;
+import org.lwjgl.BufferUtils;
+import org.lwjgl.glfw.GLFWErrorCallback;
+import org.lwjgl.opengl.GL;
+
+import java.nio.FloatBuffer;
+import java.util.Arrays;
+
+import static org.lwjgl.glfw.Callbacks.glfwFreeCallbacks;
+import static org.lwjgl.glfw.GLFW.*;
+import static org.lwjgl.opengl.GL11.*;
+import static org.lwjgl.system.MemoryUtil.NULL;
+
+public class OpenGLIceberg {
+
+    private long window;
+    private final int width = 1200;
+    private final int height = 800;
+
+    private RungeKuttaFourMethod integrator;
+    private State state;
+    private Tetrahedron tetra;
+
+    private TetrahedronRenderer renderer;
+
+    public void run() {
+        init();
+        loop();
+
+        glfwFreeCallbacks(window);
+        glfwDestroyWindow(window);
+        glfwTerminate();
+        GLFWErrorCallback callback = glfwSetErrorCallback(null);
+        if (callback != null) callback.free();
+    }
+
+    private void init() {
+        double[][] verts = {
+                {0, 0, 0},
+                {10, 0, 0},
+                {0.5, Math.sqrt(3)/2, 0},
+                {0.5, Math.sqrt(3)/6, Math.sqrt(6)/3}
+        };
+        tetra = new Tetrahedron(verts, 999);
+
+        state = new State();
+        state.setCenterOfMass(new double[]{0.0, 0.0, 1.5});
+        state.setMomentum(new double[]{0,0,0});
+        state.setAngularMomentum(new double[]{10,0.2,0.3});
+        state.setVelocity(new double[]{0,0,0});
+        state.setForce(new double[]{0,0,0});
+        state.setMomentOfForce(new double[]{0,0,0});
+        state.setRotationMatrix(new double[][] {
+                {1,0,0},
+                {0,1,0},
+                {0,0,1}
+        });
+
+        integrator = new RungeKuttaFourMethod();
+        renderer = new TetrahedronRenderer();
+
+        GLFWErrorCallback.createPrint(System.err).set();
+        if (!glfwInit()) throw new IllegalStateException("Не удалось инициализировать GLFW");
+
+        glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
+        glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
+
+        window = glfwCreateWindow(width, height, "Iceberg Simulation", NULL, NULL);
+        if (window == NULL) throw new RuntimeException("Ошибка создания окна");
+
+        glfwMakeContextCurrent(window);
+        glfwSwapInterval(1);
+        glfwShowWindow(window);
+    }
+
+    private void setupFixedFunctionState() {
+        GL.createCapabilities();
+
+        glEnable(GL_DEPTH_TEST);
+        glEnable(GL_LIGHTING);
+        glEnable(GL_LIGHT0);
+        glEnable(GL_COLOR_MATERIAL);
+        glEnable(GL_NORMALIZE);
+
+        glClearColor(0.2f, 0.3f, 0.4f, 1.0f);
+    }
+
+    private void loop() {
+        setupFixedFunctionState();
+
+        while (!glfwWindowShouldClose(window)) {
+            glfwPollEvents();
+
+            // 1. Интегрируем состояние
+            state = integrator.calculate(state, tetra);
+
+            // 2. Обновляем мировые координаты тетраэдра
+            tetra.updateWorldVertices(state);
+            for (int i = 0; i < 4; i++) {
+                System.out.println(Arrays.toString(tetra.getWorldVerts()[i]));
+            }
+
+            // 3. Рисуем сцену
+            draw();
+            while (true){
+                int i = 0;
+            }
 //            glfwSwapBuffers(window);
-//            glfwPollEvents();
-//        }
-//    }
-//
-//
-//    public void draw(int screenWidth, int screenHeight, float[] state, float radius) {
-//        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-//
-//        glViewport(0, 0, screenWidth, screenHeight);
-//
-//        float[] lightDir = {1.0f, 1.0f, 0.0f, 0.0f};
-//        glLightfv(GL_LIGHT0, GL_POSITION, lightDir);
-//
-//        // Матрица проекции
-//        glMatrixMode(GL_PROJECTION);
-//        glLoadIdentity();
-//        gluPerspective(45.0f, (float) screenWidth / screenHeight, 0.1f, 100.0f);
-//
-//        // Матрица модели/вида
-//        glMatrixMode(GL_MODELVIEW);
-//        glLoadIdentity();
-//        gluLookAt(5.0f, 1.0f, 0.2f,  // Позиция камеры
-//                0.0f, 0.0f, 0.0f,  // Точка, на которую смотрим
-//                0.0f, 0.0f, 1.0f); // Вектор вверх
-//
-//        float[] color = {1.0f, 1.0f, Math.abs(state[1] / 3)};
-//        float[] nocolor = {0, 0, 0, 1};
-//        float[] ambcolor = {0.9f, 0.9f, 0.9f, 1};
-//
-//        glMaterialfv(GL_FRONT, GL_AMBIENT, ambcolor);
-//        glMaterialfv(GL_FRONT, GL_DIFFUSE, color);
-//        glMaterialfv(GL_FRONT, GL_EMISSION, nocolor);
-//
-//        glPushMatrix();
-//        glTranslatef(0.0f, 0.0f, state[0]);
-//        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-//
-//        // Создание и отрисовка сферы
-//        GLUquadric quadric = gluNewQuadric();
-//        gluSphere(quadric, radius, 30, 30);
-//        gluDeleteQuadric(quadric);
-//
-//        glPopMatrix();
-//
-//        drawAxes();
-//
-//        // Смена буфера
-//        GLFW.glfwSwapBuffers(window);
-//    }
-//
-//    private void drawAxes() {
-//        glBegin(GL_LINES);
-//
-//        // Ось X (красный цвет)
-//        glMaterialfv(GL_FRONT, GL_EMISSION, new float[]{1, 0, 0});
-//        glVertex3f(0.0f, 0.0f, 0.0f);
-//        glVertex3f(1.0f, 0.0f, 0.0f);
-//
-//        // Ось Y (зеленый цвет)
-//        glMaterialfv(GL_FRONT, GL_EMISSION, new float[]{0, 1, 0});
-//        glVertex3f(0.0f, 0.0f, 0.0f);
-//        glVertex3f(0.0f, 1.0f, 0.0f);
-//
-//        // Ось Z (синий цвет)
-//        glMaterialfv(GL_FRONT, GL_EMISSION, new float[]{0, 0, 1});
-//        glVertex3f(0.0f, 0.0f, 0.0f);
-//        glVertex3f(0.0f, 0.0f, 1.0f);
-//
-//        glEnd();
-//    }
-//
-//
-//    public static void main(String[] args) {
-//        new OpenGLIceberg().run();
-//    }
-//}
+        }
+    }
+
+    private void draw() {
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+        // Projection
+        glMatrixMode(GL_PROJECTION);
+        glLoadIdentity();
+        Matrix4f projection = new Matrix4f().perspective(
+                (float) Math.toRadians(60),
+                (float) width / height,
+                0.1f,
+                100.0f
+        );
+        FloatBuffer projBuf = BufferUtils.createFloatBuffer(16);
+        projection.get(projBuf).rewind();
+        glLoadMatrixf(projBuf);
+
+        // View
+        glMatrixMode(GL_MODELVIEW);
+        glLoadIdentity();
+        Matrix4f view = new Matrix4f().lookAt(
+                30.0f, 30.0f, 20.5f,
+                0.0f, 0.0f, 0.0f,
+                0.0f, 0.0f, 10.0f
+        );
+        FloatBuffer viewBuf = BufferUtils.createFloatBuffer(16);
+        view.get(viewBuf).rewind();
+        glMultMatrixf(viewBuf);
+
+        drawAxes();
+
+        renderer.render(tetra, state);
+    }
+
+    private void drawAxes() {
+        glBegin(GL_LINES);
+        glColor3f(1,0,0); glVertex3f(0,0,0); glVertex3f(1,0,0);
+        glColor3f(0,1,0); glVertex3f(0,0,0); glVertex3f(0,1,0);
+        glColor3f(0,0,1); glVertex3f(0,0,0); glVertex3f(0,0,1);
+        glEnd();
+    }
+
+    public static void main(String[] args) {
+        new OpenGLIceberg().run();
+    }
+}

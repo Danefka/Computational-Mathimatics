@@ -1,11 +1,13 @@
 package by.Danefka.Solids;
 
+import by.Danefka.State;
+import by.Danefka.Utils.MatrixUtils;
+import by.Danefka.Utils.VectorUtils;
+
 import static by.Danefka.Utils.NumberUtils.cube;
 import static by.Danefka.Utils.NumberUtils.sqr;
 
 public class Polyhedron {
-
-
     protected double[][] vertices;
     protected Face[] faces;
     protected double density;
@@ -14,29 +16,17 @@ public class Polyhedron {
     private double volume;
     private double mass;
     private final double[][] inertiaTensor = new double[3][3];
+    private double[][] invInertiaTensor = new double[3][3];
+    private double[][] worldVerts;
 
-    public double[] getCenterMass() {
-        return centerMass;
-    }
-
-    public double getVolume() {
-        return volume;
-    }
-
-    public double[][] getInertiaTensor() {
-        return inertiaTensor;
-    }
-
-    public double[][] getVertices() {
-        return vertices;
-    }
-
-    public Face[] getFaces() {
-        return faces;
-    }
-
-    public double getDensity() {
-        return density;
+    public Polyhedron(double[][] vertices, Face[] faces, double density, double volume, double mass, double[][] invInertiaTensor, double[][] worldVerts) {
+        this.vertices = vertices;
+        this.faces = faces;
+        this.density = density;
+        this.volume = volume;
+        this.mass = mass;
+        this.invInertiaTensor = invInertiaTensor;
+        this.worldVerts = worldVerts;
     }
 
     public Polyhedron(double[][] vertices, Face[] faces, double density) {
@@ -44,6 +34,18 @@ public class Polyhedron {
         this.faces = faces;
         this.density = density;
         initPolyhedron(density);
+
+        for (int i = 0; i < vertices.length; i++) {
+            vertices[i] = VectorUtils.vectorSub(vertices[i], centerMass);
+        }
+        worldVerts = new double[vertices.length][3];
+        for (int i = 0; i < vertices.length; i++) {
+            worldVerts[i][X] = vertices[i][X];
+            worldVerts[i][Y] = vertices[i][Y];
+            worldVerts[i][Z] = vertices[i][Z];
+
+        }
+        invInertiaTensor = MatrixUtils.invert3x3Matrix(inertiaTensor);
     }
 
     private void initPolyhedron(double density) {
@@ -81,20 +83,20 @@ public class Polyhedron {
     private static final int Z = 2;
 
     /* Глобальные переменные для выбора проекции */
-    private static int A;   // альфа
-    private static int B;   // бета
-    private static int C;   // гамма
+    private int A;   // альфа
+    private int B;   // бета
+    private int C;   // гамма
 
     /* Переменные для проекционных интегралов */
-    private static double P1, Pa, Pb, Paa, Pab, Pbb, Paaa, Paab, Pabb, Pbbb;
+    private double P1, Pa, Pb, Paa, Pab, Pbb, Paaa, Paab, Pabb, Pbbb;
 
     /* Переменные для интегралов по граням */
-    private static double Fa, Fb, Fc, Faa, Fbb, Fcc, Faaa, Fbbb, Fccc, Faab, Fbbc, Fcca;
+    private double Fa, Fb, Fc, Faa, Fbb, Fcc, Faaa, Fbbb, Fccc, Faab, Fbbc, Fcca;
 
     /* Переменные для объемных интегралов */
-    private static double T0, T1x, T1y, T1z;
-    private static double T2x, T2y, T2z;
-    private static double TPx, TPy, TPz;
+    private double T0, T1x, T1y, T1z;
+    private double T2x, T2y, T2z;
+    private double TPx, TPy, TPz;
 
     /* Вычисление проекционных интегралов по грани */
     private void compProjectionIntegrals(Face f) {
@@ -256,5 +258,94 @@ public class Polyhedron {
         TPx /= 2.0;
         TPy /= 2.0;
         TPz /= 2.0;
+    }
+
+    public double[] getCenterMass() {
+        return centerMass;
+    }
+
+    public double getVolume() {
+        return volume;
+    }
+
+    public double[][] getInertiaTensor() {
+        return inertiaTensor;
+    }
+
+    public double[][] getVertices() {
+        return vertices;
+    }
+
+    public Face[] getFaces() {
+        return faces;
+    }
+
+    public double getDensity() {
+        return density;
+    }
+
+    public double[][] getInvInertiaTensor() {
+        return invInertiaTensor;
+    }
+
+    public void updateWorldVertices(State state) {
+        if (worldVerts == null) {
+            worldVerts = new double[vertices.length][3];
+        }
+
+        double[][] rot = state.getRotationMatrix();
+        double[] com = state.getCenterOfMass();
+
+        for (int i = 0; i < vertices.length; i++) {
+            double[] v = vertices[i]; // локальная вершина
+            worldVerts[i][0] = rot[0][0]*v[0] + rot[0][1]*v[1] + rot[0][2]*v[2] + com[0];
+            worldVerts[i][1] = rot[1][0]*v[0] + rot[1][1]*v[1] + rot[1][2]*v[2] + com[1];
+            worldVerts[i][2] = rot[2][0]*v[0] + rot[2][1]*v[1] + rot[2][2]*v[2] + com[2];
+        }
+    }
+
+    @Override
+    public Polyhedron clone() {
+        Polyhedron copy = new Polyhedron(
+                deepCopy(vertices),
+                faces.clone(),
+                density,
+                volume,
+                mass,
+                deepCopy(invInertiaTensor),
+                worldVerts != null ? deepCopy(worldVerts) : null
+        );
+
+        copyCenterMass(copy.centerMass, this.centerMass);
+        copyMatrix(copy.inertiaTensor, this.inertiaTensor);
+
+        return copy;
+    }
+
+
+    private static double[][] deepCopy(double[][] src) {
+        if (src == null) return null;
+        double[][] dst = new double[src.length][];
+        for (int i = 0; i < src.length; i++) {
+            dst[i] = src[i].clone();
+        }
+        return dst;
+    }
+
+    private static void copyCenterMass(double[] dst, double[] src) {
+        System.arraycopy(src, 0, dst, 0, 3);
+    }
+
+    private static void copyMatrix(double[][] dst, double[][] src) {
+        for (int i = 0; i < 3; i++) {
+            System.arraycopy(src[i], 0, dst[i], 0, 3);
+        }
+    }
+
+
+
+
+    public double[][] getWorldVerts(){
+        return worldVerts;
     }
 }

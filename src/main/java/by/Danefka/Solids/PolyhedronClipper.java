@@ -31,7 +31,7 @@ public class PolyhedronClipper {
     }
 
     public static Polyhedron clipPolyhedron(Polyhedron polyhedron) {
-        double[][] vertices = polyhedron.getVertices();
+        double[][] vertices = polyhedron.getWorldVerts();
         ArrayList<double[]> newVertices = new ArrayList<>();
         newVertices.addAll(Arrays.asList(vertices));
 

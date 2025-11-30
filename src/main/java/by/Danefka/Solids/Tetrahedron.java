@@ -3,6 +3,7 @@ package by.Danefka.Solids;
 public class Tetrahedron extends Polyhedron {
 
 
+
     public Tetrahedron(double[][] vertices, double density) {
         super(vertices, createTetrahedronFaces(vertices), density);
     }

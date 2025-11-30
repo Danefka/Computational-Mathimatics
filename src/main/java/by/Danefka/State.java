@@ -1,5 +1,9 @@
 package by.Danefka;
 
+import by.Danefka.Utils.MatrixUtils;
+import by.Danefka.Utils.VectorUtils;
+import by.Danefka.methods.Derivatives;
+
 public class State {
     private double[] centerOfMass;
     private double[] momentum;
@@ -10,6 +14,29 @@ public class State {
     private double[] force;
     private double[][] derivativeOfTheRotationMatrix;
     private double[] momentOfForce;
+
+    public State() {
+        centerOfMass = new double[3];
+        momentum = new double[3];
+        rotationMatrix = new double[3][3];
+        angularMomentum = new double[3];
+
+        velocity = new double[3];
+        force = new double[3];
+        derivativeOfTheRotationMatrix = new double[3][3];
+        momentOfForce = new double[3];
+    }
+
+    public State(double[] centerOfMass, double[] momentum, double[][] rotationMatrix, double[] angularMomentum, double[] velocity, double[] force, double[][] derivativeOfTheRotationMatrix, double[] momentOfForce) {
+        this.centerOfMass = centerOfMass;
+        this.momentum = momentum;
+        this.rotationMatrix = rotationMatrix;
+        this.angularMomentum = angularMomentum;
+        this.velocity = velocity;
+        this.force = force;
+        this.derivativeOfTheRotationMatrix = derivativeOfTheRotationMatrix;
+        this.momentOfForce = momentOfForce;
+    }
 
     public State(double[] centerOfMass, double[] momentum, double[] angularMomentum, double[] velocity, double[] force, double[][] derivativeOfTheRotationMatrix, double[] momentOfForce) {
         this.rotationMatrix = new double[][]{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}};
@@ -84,5 +111,80 @@ public class State {
 
     public double[] getMomentOfForce() {
         return momentOfForce;
+    }
+
+    @Override
+    public State clone() {
+        return new State(
+                this.centerOfMass.clone(),
+                this.momentum.clone(),
+                deepCopyMatrix(this.rotationMatrix),
+                this.angularMomentum.clone(),
+                this.velocity.clone(),
+                this.force != null ? this.force.clone() : null,
+                this.derivativeOfTheRotationMatrix.clone(),
+                this.momentOfForce != null ? this.momentOfForce.clone() : null
+        );
+    }
+
+    private static double[][] deepCopyMatrix(double[][] m) {
+        if (m == null) return null;
+        double[][] copy = new double[m.length][];
+        for (int i = 0; i < m.length; i++) {
+            copy[i] = m[i].clone();
+        }
+        return copy;
+    }
+
+
+    public State add(Derivatives k, double h) {
+        double[] newCenterOfMass = VectorUtils.vectorSum(this.centerOfMass,
+                VectorUtils.multiplyByScalar(k.dCenterOfMass, h));
+        double[] newMomentum = VectorUtils.vectorSum(this.momentum,
+                VectorUtils.multiplyByScalar(k.dMomentum, h));
+        double[] newAngularMomentum = VectorUtils.vectorSum(this.angularMomentum,
+                VectorUtils.multiplyByScalar(k.dAngularMomentum, h));
+        double[][] newRotationMatrix = MatrixUtils.addMatrices(this.rotationMatrix,
+                MatrixUtils.multiplyByScalar(k.dRotationMatrix, h));
+
+        return new State(
+                newCenterOfMass,
+                newMomentum,
+                newRotationMatrix,
+                newAngularMomentum,
+                this.velocity,
+                this.force != null ? this.force.clone() : null,
+                this.derivativeOfTheRotationMatrix != null ? deepCopyMatrix(this.derivativeOfTheRotationMatrix) : null,
+                this.momentOfForce != null ? this.momentOfForce.clone() : null
+        );
+    }
+
+
+    private static double[] add(double[] a, double[] b) {
+        double[] r = new double[a.length];
+        for (int i = 0; i < a.length; i++) r[i] = a[i] + b[i];
+        return r;
+    }
+
+    private static double[][] add(double[][] a, double[][] b) {
+        double[][] r = new double[a.length][a[0].length];
+        for (int i = 0; i < a.length; i++)
+            for (int j = 0; j < a[0].length; j++)
+                r[i][j] = a[i][j] + b[i][j];
+        return r;
+    }
+
+    private static double[] scale(double[] a, double s) {
+        double[] r = new double[a.length];
+        for (int i = 0; i < a.length; i++) r[i] = a[i] * s;
+        return r;
+    }
+
+    private static double[][] scale(double[][] a, double s) {
+        double[][] r = new double[a.length][a[0].length];
+        for (int i = 0; i < a.length; i++)
+            for (int j = 0; j < a[0].length; j++)
+                r[i][j] = a[i][j] * s;
+        return r;
     }
 }

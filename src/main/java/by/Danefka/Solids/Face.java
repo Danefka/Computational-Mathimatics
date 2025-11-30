@@ -2,7 +2,7 @@ package by.Danefka.Solids;
 
 public class Face {
     int numVerts;
-    double[] norm = new double[3];
+    double[] norm;
     double w;
     int[] verts;
 
@@ -12,8 +12,6 @@ public class Face {
         this.w = w;
         this.verts = verts;
     }
-
-
 
 
     public int getNumVerts() {
