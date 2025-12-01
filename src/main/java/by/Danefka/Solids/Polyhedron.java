@@ -8,6 +8,7 @@ import static by.Danefka.Utils.NumberUtils.cube;
 import static by.Danefka.Utils.NumberUtils.sqr;
 
 public class Polyhedron {
+    private static boolean singleton = false;
     protected double[][] vertices;
     protected Face[] faces;
     protected double density;
@@ -18,6 +19,10 @@ public class Polyhedron {
     private final double[][] inertiaTensor = new double[3][3];
     private double[][] invInertiaTensor = new double[3][3];
     private double[][] worldVerts;
+
+    public double getMass() {
+        return mass;
+    }
 
     public Polyhedron(double[][] vertices, Face[] faces, double density, double volume, double mass, double[][] invInertiaTensor, double[][] worldVerts) {
         this.vertices = vertices;
@@ -45,7 +50,10 @@ public class Polyhedron {
             worldVerts[i][Z] = vertices[i][Z];
 
         }
-        invInertiaTensor = MatrixUtils.invert3x3Matrix(inertiaTensor);
+        if (!singleton){
+            invInertiaTensor = MatrixUtils.invert3x3Matrix(inertiaTensor);
+            singleton = !singleton;
+        }
     }
 
     private void initPolyhedron(double density) {

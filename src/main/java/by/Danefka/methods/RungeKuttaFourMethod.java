@@ -11,60 +11,30 @@ import java.util.Arrays;
 
 public class RungeKuttaFourMethod implements ICalculate {
 
-    private final double h = 0.1;
+    private final double h = 0.001;
 
     private final CalculateForces calculateForces = new CalculateForces();
     private final CalculateMomentOfForce calculateMomentOfForce = new CalculateMomentOfForce();
 
     @Override
     public State calculate(State s, Polyhedron p) {
-        for (int i = 0; i < 4; i++) {
-            System.out.println(Arrays.toString(p.getWorldVerts()[i]));
-        }
-        for (int i = 0; i < 3; i++) {
-            for (int j = 0; j < 3; j++) {
-                System.out.println(s.getRotationMatrix()[i][j]);
-            }
-        }
 
         Derivatives k1 = derivatives(s, p);
         State s1 = s.clone().add(k1, h/2);
         Polyhedron pTemp = p.clone();
         pTemp.updateWorldVertices(s1);
-        for (int i = 0; i < 4; i++) {
-            System.out.println(Arrays.toString(pTemp.getWorldVerts()[i]));
-        }
-        for (int i = 0; i < 3; i++) {
-            for (int j = 0; j < 3; j++) {
-                System.out.println(s1.getRotationMatrix()[i][j]);
-            }
-        }
+
 
         Derivatives k2 = derivatives(s1,pTemp);
         State s2 = s.clone().add(k2, h/2);
         pTemp = p.clone();
         pTemp.updateWorldVertices(s2);
-        for (int i = 0; i < 4; i++) {
-            System.out.println(Arrays.toString(pTemp.getWorldVerts()[i]));
-        }
-        for (int i = 0; i < 3; i++) {
-            for (int j = 0; j < 3; j++) {
-                System.out.println(s2.getRotationMatrix()[i][j]);
-            }
-        }
+
 
         Derivatives k3 = derivatives(s2, pTemp);
         State s3 = s.clone().add(k3, h);
         pTemp = p.clone();
         pTemp.updateWorldVertices(s3);
-        for (int i = 0; i < 4; i++) {
-            System.out.println(Arrays.toString(pTemp.getWorldVerts()[i]));
-        }
-        for (int i = 0; i < 3; i++) {
-            for (int j = 0; j < 3; j++) {
-                System.out.println(s3.getRotationMatrix()[i][j]);
-            }
-        }
 
         Derivatives k4 = derivatives(s3, pTemp);
 

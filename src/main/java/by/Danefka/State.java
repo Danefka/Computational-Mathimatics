@@ -144,8 +144,8 @@ public class State {
                 VectorUtils.multiplyByScalar(k.dMomentum, h));
         double[] newAngularMomentum = VectorUtils.vectorSum(this.angularMomentum,
                 VectorUtils.multiplyByScalar(k.dAngularMomentum, h));
-        double[][] newRotationMatrix = MatrixUtils.addMatrices(this.rotationMatrix,
-                MatrixUtils.multiplyByScalar(k.dRotationMatrix, h));
+        double[][] newRotationMatrix = MatrixUtils.gramSchmidt(MatrixUtils.addMatrices(this.rotationMatrix,
+                MatrixUtils.multiplyByScalar(k.dRotationMatrix, h)));
 
         return new State(
                 newCenterOfMass,

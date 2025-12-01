@@ -108,41 +108,43 @@ public class MatrixUtils {
     }
 
     // Ортогонализация матрицы методом Грама-Шмидта
-    public static double[][] gramSchmidt(double[][] R) {
-        double[][] ortho = new double[3][3];
+    public static double[][] gramSchmidt(double[][] vectors) {
+        int n = vectors.length;
+        int m = vectors[0].length;
 
-        double[] c0 = { R[0][0], R[1][0], R[2][0] };
-        double[] c1 = { R[0][1], R[1][1], R[2][1] };
-        double[] c2 = { R[0][2], R[1][2], R[2][2] };
+        double[][] ortho = new double[n][m];
 
-        normalize(c0);
-        subtractProjection(c1, c0);
-        normalize(c1);
-        subtractProjection(c2, c0);
-        subtractProjection(c2, c1);
-        normalize(c2);
+        for (int k = 0; k < n; k++) {
+            // берём очередной вектор v_k
+            double[] vk = vectors[k].clone();
 
-        for (int i = 0; i < 3; i++) {
-            ortho[i][0] = c0[i];
-            ortho[i][1] = c1[i];
-            ortho[i][2] = c2[i];
+            // вычитаем проекции на уже построенные ортонормированные векторы
+            for (int j = 0; j < k; j++) {
+                double dot = 0.0;
+                double norm2 = 0.0;
+                for (int i = 0; i < m; i++) {
+                    dot   += vk[i] * ortho[j][i];
+                    norm2 += ortho[j][i] * ortho[j][i];
+                }
+                double coeff = dot / norm2;
+                for (int i = 0; i < m; i++) {
+                    vk[i] -= coeff * ortho[j][i];
+                }
+            }
+
+            // нормируем полученный вектор
+            double norm = 0.0;
+            for (int i = 0; i < m; i++) {
+                norm += vk[i] * vk[i];
+            }
+            norm = Math.sqrt(norm);
+            if (norm == 0.0) {
+                throw new IllegalArgumentException("Векторы линейно зависимы");
+            }
+            for (int i = 0; i < m; i++) {
+                ortho[k][i] = vk[i] / norm;
+            }
         }
-
         return ortho;
-    }
-
-    private static void normalize(double[] v) {
-        double norm = Math.sqrt(v[0]*v[0] + v[1]*v[1] + v[2]*v[2]);
-        if (norm < 1e-8) norm = 1e-8;
-        v[0] /= norm;
-        v[1] /= norm;
-        v[2] /= norm;
-    }
-
-    private static void subtractProjection(double[] v, double[] u) {
-        double dot = v[0]*u[0] + v[1]*u[1] + v[2]*u[2];
-        v[0] -= dot * u[0];
-        v[1] -= dot * u[1];
-        v[2] -= dot * u[2];
     }
 }

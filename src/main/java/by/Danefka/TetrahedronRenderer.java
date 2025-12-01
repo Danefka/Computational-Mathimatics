@@ -11,13 +11,10 @@ import static org.lwjgl.opengl.GL11.*;
 
 public class TetrahedronRenderer {
     public void render(Tetrahedron tetrahedron, State state) {
-        double[][] vertices = tetrahedron.getWorldVerts(); // Предполагается, что у Polyhedron есть getVertices()
-        Face[] faces = tetrahedron.getFaces();           // Предполагается, что у Polyhedron есть getFaces()
+        double[][] vertices = tetrahedron.getVertices();
+        Face[] faces = tetrahedron.getFaces();
 
-        // Центр масс объекта
         double[] center = state.getCenterOfMass();
-
-        // Матрица поворота
         double[][] rot = state.getRotationMatrix();
 
         FloatBuffer transformBuf = BufferUtils.createFloatBuffer(16);

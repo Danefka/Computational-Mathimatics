@@ -1,6 +1,9 @@
 package by.Danefka;
 
+import by.Danefka.Solids.Polyhedron;
 import by.Danefka.Solids.Tetrahedron;
+import by.Danefka.Utils.MatrixUtils;
+import by.Danefka.Utils.VectorUtils;
 import by.Danefka.methods.RungeKuttaFourMethod;
 import org.joml.Matrix4f;
 import org.lwjgl.BufferUtils;
@@ -8,7 +11,6 @@ import org.lwjgl.glfw.GLFWErrorCallback;
 import org.lwjgl.opengl.GL;
 
 import java.nio.FloatBuffer;
-import java.util.Arrays;
 
 import static org.lwjgl.glfw.Callbacks.glfwFreeCallbacks;
 import static org.lwjgl.glfw.GLFW.*;
@@ -41,17 +43,18 @@ public class OpenGLIceberg {
     private void init() {
         double[][] verts = {
                 {0, 0, 0},
-                {10, 0, 0},
+                {1, 0, 0},
                 {0.5, Math.sqrt(3)/2, 0},
                 {0.5, Math.sqrt(3)/6, Math.sqrt(6)/3}
         };
-        tetra = new Tetrahedron(verts, 999);
+        tetra = new Tetrahedron(verts, 990);
 
         state = new State();
-        state.setCenterOfMass(new double[]{0.0, 0.0, 1.5});
+        state.setCenterOfMass(tetra.getCenterMass());
         state.setMomentum(new double[]{0,0,0});
-        state.setAngularMomentum(new double[]{10,0.2,0.3});
+        state.setAngularMomentum(new double[]{0.0,0.0,0.0});
         state.setVelocity(new double[]{0,0,0});
+
         state.setForce(new double[]{0,0,0});
         state.setMomentOfForce(new double[]{0,0,0});
         state.setRotationMatrix(new double[][] {
@@ -92,6 +95,7 @@ public class OpenGLIceberg {
     private void loop() {
         setupFixedFunctionState();
 
+        int i = 0;
         while (!glfwWindowShouldClose(window)) {
             glfwPollEvents();
 
@@ -100,16 +104,17 @@ public class OpenGLIceberg {
 
             // 2. Обновляем мировые координаты тетраэдра
             tetra.updateWorldVertices(state);
-            for (int i = 0; i < 4; i++) {
-                System.out.println(Arrays.toString(tetra.getWorldVerts()[i]));
-            }
 
+            
+            
             // 3. Рисуем сцену
             draw();
-            while (true){
-                int i = 0;
+            if (i%100 == 0){
+                printKineticEnergy(tetra,state);
             }
-//            glfwSwapBuffers(window);
+
+            i++;
+            glfwSwapBuffers(window);
         }
     }
 
@@ -133,9 +138,9 @@ public class OpenGLIceberg {
         glMatrixMode(GL_MODELVIEW);
         glLoadIdentity();
         Matrix4f view = new Matrix4f().lookAt(
-                30.0f, 30.0f, 20.5f,
+                3.0f, 3.0f, 2.5f,
                 0.0f, 0.0f, 0.0f,
-                0.0f, 0.0f, 10.0f
+                0.0f, 0.0f, 1.0f
         );
         FloatBuffer viewBuf = BufferUtils.createFloatBuffer(16);
         view.get(viewBuf).rewind();
@@ -157,4 +162,28 @@ public class OpenGLIceberg {
     public static void main(String[] args) {
         new OpenGLIceberg().run();
     }
+
+    private static void printKineticEnergy(Tetrahedron tetra, State state) {
+
+        double mgh = Math.abs(tetra.getMass() * state.getCenterOfMass()[2] * 9.8);
+
+        double[] v = state.getVelocity();
+        double mv = 0.5 * tetra.getMass() * (v[0]*v[0] + v[1]*v[1] + v[2]*v[2]);
+
+        double[][] R = state.getRotationMatrix();
+        double[] L = state.getAngularMomentum();
+        double[][] Rt = MatrixUtils.transpose(R);
+        double[] L_body = MatrixUtils.multiplyMatrixVector(Rt, L);
+        double[] omega_body = MatrixUtils.multiplyMatrixVector(tetra.getInvInertiaTensor(), L_body);
+        double[] omega = MatrixUtils.multiplyMatrixVector(R, omega_body);
+
+        double mw = 0.5 * VectorUtils.dotProduct(L, omega);
+
+        System.out.println("Energy = " + (mgh + mv + mw));
+        System.out.println("mgh = " + mgh);
+        System.out.println("mv^2 = " + mv);
+        System.out.println("mw^2 = " + mw);
+        System.out.println();
+    }
+
 }

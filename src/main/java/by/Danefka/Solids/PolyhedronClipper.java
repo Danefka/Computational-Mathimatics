@@ -6,11 +6,11 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 public class PolyhedronClipper {
-    private static class Pair<A, B> {
-        final A first;
-        final B second;
+    private static class Pair {
+        final Integer first;
+        final Integer second;
 
-        Pair(A first, B second) {
+        Pair(Integer first, Integer second) {
             this.first = first;
             this.second = second;
         }
@@ -19,23 +19,40 @@ public class PolyhedronClipper {
         public boolean equals(Object o) {
             if (this == o) return true;
             if (o == null || getClass() != o.getClass()) return false;
-            Pair<?, ?> pair = (Pair<?, ?>) o;
-            return Objects.equals(first, pair.first) &&
-                   Objects.equals(second, pair.second);
+            Pair pair = (Pair) o;
+            return Objects.equals(Math.min(first, pair.first), Math.max(first, pair.first)) &&
+                   Objects.equals(Math.min(second, pair.second),Math.max(second, pair.second));
         }
 
         @Override
         public int hashCode() {
-            return Objects.hash(first, second);
+            return Objects.hash(Math.min(first, second), Math.max(first, second));
         }
     }
 
     public static Polyhedron clipPolyhedron(Polyhedron polyhedron) {
+        boolean allUnderZero = true;
+        boolean allAboveZero = true;
+        for (double[] vert : polyhedron.getWorldVerts()){
+            if (vert[2] > 0){
+                allUnderZero = false;
+            }
+            if (vert[2] < 0){
+                allAboveZero = false;
+            }
+            if (!allAboveZero && !allUnderZero){
+                break;
+            }
+        }
+
+        if (allAboveZero) return null;
+        if (allUnderZero) return polyhedron.clone();
+
         double[][] vertices = polyhedron.getWorldVerts();
         ArrayList<double[]> newVertices = new ArrayList<>();
         newVertices.addAll(Arrays.asList(vertices));
 
-        HashMap<Pair<Integer, Integer>, Integer> replacedEdges = new HashMap<>();
+        HashMap<Pair, Integer> replacedEdges = new HashMap<>();
         ArrayList<Integer> verticesAtZero = new ArrayList<>();
         ArrayList<Face> newFaces = new ArrayList<>();
 
@@ -57,7 +74,7 @@ public class PolyhedronClipper {
                     }
                 } else {
                     if (vertices[prevIdx][2] < 0) {
-                        Pair<Integer, Integer> edge = new Pair<>(prevIdx, currentIdx);
+                        Pair edge = new Pair(prevIdx, currentIdx);
 
                         if (replacedEdges.containsKey(edge)) {
                             newFace.add(replacedEdges.get(edge));
@@ -73,13 +90,13 @@ public class PolyhedronClipper {
                             newVertices.add(newPoint);
                             int newIndex = newVertices.size() - 1;
                             replacedEdges.put(edge, newIndex);
-                            replacedEdges.put(new Pair<>(currentIdx, prevIdx), newIndex);
+                            replacedEdges.put(new Pair(currentIdx, prevIdx), newIndex);
                             verticesAtZero.add(newIndex);
                             newFace.add(newIndex);
                         }
                     }
                     if (vertices[nextIdx][2] < 0) {
-                        Pair<Integer, Integer> edge = new Pair<>(nextIdx, currentIdx);
+                        Pair edge = new Pair(nextIdx, currentIdx);
 
 
                         if (replacedEdges.containsKey(edge)) {
@@ -96,7 +113,7 @@ public class PolyhedronClipper {
                             newVertices.add(newPoint);
                             int newIndex = newVertices.size() - 1;
                             replacedEdges.put(edge, newIndex);
-                            replacedEdges.put(new Pair<>(currentIdx, nextIdx), newIndex);
+                            replacedEdges.put(new Pair(currentIdx, nextIdx), newIndex);
                             verticesAtZero.add(newIndex);
                             newFace.add(newIndex);
                         }

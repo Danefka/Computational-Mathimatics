@@ -17,4 +17,16 @@ public class VectorUtils {
         for (int i = 0; i < a.length; i++) r[i] = a[i] * s;
         return r;
     }
+
+    public static double[] crossProduct(double[] f, double[] s) {
+        return new double[]{
+                f[1] * s[2] - f[2] * s[1],
+                f[2] * s[0] - f[0] * s[2],
+                f[0] * s[1] - f[1] * s[0]
+        };
+    }
+
+    public static double dotProduct(double[] f, double[] s) {
+        return f[0]*s[0] + f[1]*s[1] + f[2]+s[2];
+    }
 }
