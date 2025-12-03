@@ -11,6 +11,7 @@ import org.lwjgl.glfw.GLFWErrorCallback;
 import org.lwjgl.opengl.GL;
 
 import java.nio.FloatBuffer;
+import java.util.Arrays;
 
 import static org.lwjgl.glfw.Callbacks.glfwFreeCallbacks;
 import static org.lwjgl.glfw.GLFW.*;
@@ -42,17 +43,17 @@ public class OpenGLIceberg {
 
     private void init() {
         double[][] verts = {
-                {0, 0, 0},
-                {1, 0, 0},
-                {0.5, Math.sqrt(3)/2, 0},
-                {0.5, Math.sqrt(3)/6, Math.sqrt(6)/3}
+                {0, 0, 100},
+                {1, 0, 100},
+                {0.5, Math.sqrt(3)/2, 100},
+                {0.5, Math.sqrt(3)/6, Math.sqrt(6)/3 + 100}
         };
         tetra = new Tetrahedron(verts, 990);
 
         state = new State();
         state.setCenterOfMass(tetra.getCenterMass());
-        state.setMomentum(new double[]{0,0,0});
-        state.setAngularMomentum(new double[]{0.0,0.0,0.0});
+        state.setMomentum(new double[]{1,3,3});
+        state.setAngularMomentum(new double[]{10.0,2.0,0.0});
         state.setVelocity(new double[]{0,0,0});
 
         state.setForce(new double[]{0,0,0});
@@ -138,9 +139,9 @@ public class OpenGLIceberg {
         glMatrixMode(GL_MODELVIEW);
         glLoadIdentity();
         Matrix4f view = new Matrix4f().lookAt(
-                3.0f, 3.0f, 2.5f,
+                3.0f + 30, 3.0f + 30, 2.5f + 30,
                 0.0f, 0.0f, 0.0f,
-                0.0f, 0.0f, 1.0f
+                0.0f, 0.0f, 1.0f + 30
         );
         FloatBuffer viewBuf = BufferUtils.createFloatBuffer(16);
         view.get(viewBuf).rewind();
@@ -179,6 +180,7 @@ public class OpenGLIceberg {
 
         double mw = 0.5 * VectorUtils.dotProduct(L, omega);
 
+        System.out.println("coordinate: " + Arrays.toString(state.getCenterOfMass()));
         System.out.println("Energy = " + (mgh + mv + mw));
         System.out.println("mgh = " + mgh);
         System.out.println("mv^2 = " + mv);
