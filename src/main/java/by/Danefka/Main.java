@@ -1,6 +1,5 @@
 package by.Danefka;
 
-import by.Danefka.Solids.Polyhedron;
 import by.Danefka.Solids.Tetrahedron;
 import by.Danefka.Utils.MatrixUtils;
 import by.Danefka.Utils.VectorUtils;
@@ -18,8 +17,7 @@ import static org.lwjgl.glfw.GLFW.*;
 import static org.lwjgl.opengl.GL11.*;
 import static org.lwjgl.system.MemoryUtil.NULL;
 
-public class OpenGLIceberg {
-
+public class Main {
     private long window;
     private final int width = 1200;
     private final int height = 800;
@@ -161,7 +159,7 @@ public class OpenGLIceberg {
     }
 
     public static void main(String[] args) {
-        new OpenGLIceberg().run();
+        new Main().run();
     }
 
     private static void printKineticEnergy(Tetrahedron tetra, State state) {
